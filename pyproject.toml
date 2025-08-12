@@ -1,5 +1,5 @@
 [project]
-name = "splashscreen"
+name = "tksplashscreen"
 version = "1.0"
 description = "A basic splashscreen, using tkinter"
 authors = [{ name="Smorkster", email="smorkster@gmail.com" }]
