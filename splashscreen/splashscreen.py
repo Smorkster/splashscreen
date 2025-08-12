@@ -55,7 +55,7 @@ class SplashScreen:
                  bg: str = "#00538F",
                  fg: str = "white"
                 ):
-        """ Initialize the splash screen with a message, auto-close time, placement, and font
+        """ Initialize the splash screen
 
             message (str): The message to display on the splash screen.
             close_after (float): Time in seconds after which the splash screen will close automatically.
