@@ -31,11 +31,11 @@ class Placement:
                 self._placement = EnumPlacement[ placement.upper() ]
                 self._is_dict = False
             except KeyError:
-                logging.warning( "Invalid placement '%s'; defaulting to BR", placement )
+                logging.warning( 'Invalid placement \'%s\'; defaulting to BR', placement )
                 self._placement = EnumPlacement[ 'BR' ]
                 self._is_dict = False
         else:
-            logging.warning( "Unsupported placement type %s; defaulting to BR", type( placement ) )
+            logging.warning( 'Unsupported placement type %s; defaulting to BR', type( placement ) )
             self._placement = EnumPlacement[ 'BR' ]
             self._is_dict = False
 
@@ -65,20 +65,30 @@ class Placement:
             # For function placement, call the function
             x, y = self._placement( width, height, sw, sh )
 
-        return f"{ width }x{ height }+{ x }+{ y }"
+        if ( x + width ) > sw:
+            x = sw - width
+            logging.warning( 'Too far right, moving inside screen' )
+
+        if ( y + height + 40 ) > sh:
+            y = sh - height - 40
+            logging.warning( 'Too far down, moving inside screen' )
+
+        return f'{ width }x{ height }+{ x }+{ y }'
 
 class SplashScreen:
     """ A simple splash screen class using tkinter """
     def __init__( self,
                  message: str,
                  close_after: Optional[ float ] = None,
-                 placement: Optional[ str ] = "BR",
+                 placement: Optional[ str ] = 'BR',
                  font: Optional[ Union[ str, Tuple ] ] = None,
-                 bg: str = "#00538F",
-                 fg: str = "white",
+                 bg: str = '#00538F',
+                 fg: str = 'white',
                  mainwindow: Optional[ tk.Tk ] = None,
                  close_button: Optional[ bool ] = False,
-                 title: Optional[ str ] = None
+                 title: Optional[ str ] = None,
+                 standalone_blocking: Optional[ bool ] = True,
+                 block_main: Optional[ bool ] = False
                 ):
         """ Initialize the splash screen
 
@@ -91,6 +101,8 @@ class SplashScreen:
             * mainwindow (tk.TK): A window to which the splashscreen belongs to
             * close_button (bool): Should a closebutton be available in upper right corner
             * title (str): A title to be displayed at top of the splashscreen
+            * standalone_blocking (bool): Whether standalone splash should block (run mainloop)
+            * block_main (bool): Should main window be blocked when splash screen is displayed
         """
 
         if len( message ) == 0 or message == None:
@@ -103,10 +115,14 @@ class SplashScreen:
         self._bg = bg
         self._fg = fg
 
-        self._main_window = mainwindow
+        self._block_mainwindow = block_main
+        if self._block_mainwindow:
+            self.rootwindow.wm_attributes( '-disabled', True )
+
         self._close_button = close_button
         self._title = title
         self._is_standalone = mainwindow is None  # Track if this is a standalone splash
+        self._standalone_blocking = standalone_blocking
 
         self.root = None
         self.label = None
@@ -117,7 +133,6 @@ class SplashScreen:
             self.rootwindow.after( 0, self._create_window )
             self.rootwindow.update()
             self.rootwindow.update_idletasks()
-            #self._create_window()
         else:
             self._create_window()
 
@@ -133,8 +148,12 @@ class SplashScreen:
                 self.root.destroy()
                 self.root = None
 
+                if self._block_mainwindow:
+                    self.rootwindow.wm_attributes( '-disabled', False )
+                    self.rootwindow.deiconify()
+
             except tk.TclError as e:
-                logging.warning( f"Error closing splash screen: { e }" )
+                logging.warning( f'Error closing splash screen: { e }' )
 
     def _create_custom_flat_button( self ):
         """Create a completely flat custom button using Canvas"""
@@ -147,13 +166,13 @@ class SplashScreen:
                                 borderwidth = 0 )
 
         # Draw the X symbol
-        self.close_btn.create_line( 6, 6, 18, 18, fill = self._fg.get(), width = 2, tags = "x_line" )
-        self.close_btn.create_line( 18, 6, 6, 18, fill = self._fg.get(), width = 2, tags = "x_line" )
+        self.close_btn.create_line( 6, 6, 18, 18, fill = self._fg.get(), width = 2, tags = 'x_line' )
+        self.close_btn.create_line( 18, 6, 6, 18, fill = self._fg.get(), width = 2, tags = 'x_line' )
 
         # Bind events
-        self.close_btn.bind( "<Button-1>", lambda e: self.close() )
-        self.close_btn.bind( "<Enter>", self._on_canvas_button_hover )
-        self.close_btn.bind( "<Leave>", self._on_canvas_button_leave )
+        self.close_btn.bind( '<Button-1>', lambda e: self.close() )
+        self.close_btn.bind( '<Enter>', self._on_canvas_button_hover )
+        self.close_btn.bind( '<Leave>', self._on_canvas_button_leave )
 
         self.close_btn.grid( column = 1, row = 0, padx = 5, pady = 5, sticky = ( tk.N, tk.E ) )
 
@@ -185,14 +204,14 @@ class SplashScreen:
         hover_color = self._lighten_color( self._bg.get(), 0.3 )
         self.close_btn.configure( bg = hover_color )
         # Make the X slightly larger/bolder
-        self.close_btn.itemconfig( "x_line", width = 4 )
+        self.close_btn.itemconfig( 'x_line', width = 4 )
 
     def _on_canvas_button_leave( self, event ):
         """Handle canvas button leave"""
         # Return to original background
         self.close_btn.configure( bg = self._bg.get() )
         # Return X to original size
-        self.close_btn.itemconfig( "x_line", width = 2 )
+        self.close_btn.itemconfig( 'x_line', width = 2 )
 
     def _create_window( self ):
         """ Create the splash screen window in a separate thread """
@@ -201,12 +220,13 @@ class SplashScreen:
                 self.root = tk.Toplevel( self.rootwindow )
             else:
                 self.root = tk.Tk()
-            self.root.attributes( "-topmost", True )
+
+            self.root.attributes( '-topmost', True )
             self.root.overrideredirect( True )
             self.root.update_idletasks()
 
-            self._fg = self._normalize_color( self._fg, "white" )
-            self._bg = self._normalize_color( self._bg, "#00538F" )
+            self._fg = self._normalize_color( self._fg, 'white' )
+            self._bg = self._normalize_color( self._bg, '#00538F' )
             self._bg.trace_add( 'write', self._update_background )
 
             self._resize_and_position()
@@ -219,11 +239,11 @@ class SplashScreen:
                         raise
                     font = temptup[0].strip()
                     size = int( temptup[1].strip() ) or 18
-                    style = temptup[2].strip() or "normal"
+                    style = temptup[2].strip() or 'normal'
                     self._font = ( font, size, style )
                 except:
-                    logging.warning( "Invalid font format '%s'; using default", self._font )
-                    temptup = ( "Calibri", 18, "bold" )
+                    logging.warning( 'Invalid font format \'%s\'; using default', self._font )
+                    temptup = ( 'Calibri', 18, 'bold' )
             elif isinstance( self._font, tuple ):
                 temptup = self._font
 
@@ -232,17 +252,17 @@ class SplashScreen:
                                       text = self._message,
                                       font = self._font,
                                       fg = self._fg.get(),
-                                      justify = "left",
-                                      anchor = "nw"
+                                      justify = 'left',
+                                      anchor = 'nw'
                                      )
                 self.title.grid( sticky = ( tk.N, tk.W ) )
 
             self.label = tk.Label( self.root, text = self._message,
                                   font = self._font,
                                   fg = self._fg.get(),
-                                  justify = "left",
+                                  justify = 'left',
                                   wraplength = 400,
-                                  anchor = "nw" )
+                                  anchor = 'nw' )
             self.label.grid( column = 0, columnspan = 2, row = 1, padx = 20, pady = 20, sticky = ( tk.N, tk.W ) )
 
             if self._close_button:
@@ -262,10 +282,15 @@ class SplashScreen:
             self.root.grid_rowconfigure( index = 0, weight = 0 )
             self.root.grid_rowconfigure( index = 1, weight = 1 )
 
-            if not self.rootwindow:
+            if self._block_mainwindow:
+                self.root.grab_set_global()
+                self.root.transient( self )
+                self.root.protocol( 'WM_DELETE_WINDOW', self.close )
+
+            if self._is_standalone and self._standalone_blocking:
                 self.root.mainloop()
         except Exception as e:
-            logging.exception( "Failed to create splash screen: %s", e )
+            logging.exception( 'Failed to create splash screen: %s', e )
 
     def _normalize_color( self, value: str | tuple | tk.StringVar, default: str ) -> tk.StringVar:
         """ Return a valid Tkinter color as a StringVar, or default if invalid.
@@ -283,7 +308,7 @@ class SplashScreen:
             if self._is_valid_color( value ):
                 pass
             else:
-                logging.warning( "Invalid color '%s'; using default '%s'", value, default )
+                logging.warning( 'Invalid color \'%s\'; using default \'%s\'', value, default )
                 value = default
         elif isinstance( value, tuple ) and len( value ) == 3 and all( isinstance( c, int ) for c in value ):
             value = f'#{ value[ 0 ]:02x }{ value[ 1 ]:02x }{ value[ 2 ]:02x }'
@@ -331,7 +356,7 @@ class SplashScreen:
         if self.label:
             try:
                 if append:
-                    current_text = self.label.cget( "text" )
+                    current_text = self.label.cget( 'text' )
                     self.label.config( text = current_text + new_text )
                 else:
                     self.label.config( text = new_text )
@@ -344,14 +369,14 @@ class SplashScreen:
                 self._resize_and_position()
 
             except tk.TclError as e:
-                logging.warning( f"Error updating text: { e }" )
+                logging.warning( f'Error updating text: { e }' )
             except Exception as e:
                 logging.warning( f'Error updating text: { e }' )
                 if self.root == None:
                     logging.warning( 'SplashScreen was closed' )
 
     def _update_background( self, a, b, c ):
-        """ """
+        """ Do the actual setting of background color """
         self.root.config( bg = self._bg.get() )
         if self.label:
             self.label.config( bg = self._bg.get() )
