@@ -1,3 +1,13 @@
+"""
+SplashScreen - A flexible Python splash screen library
+
+Author: Smorkster
+GitHub: https://github.com/Smorkster/splashscreen
+License: MIT
+Version: 1.2
+Created: 2025-08-11
+"""
+
 import logging
 import threading
 import tkinter as tk
