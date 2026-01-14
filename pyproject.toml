@@ -1,27 +1,52 @@
 [project]
 name = "tksplashscreen"
-version = "1.2"
-description = "A basic splashscreen, using tkinter"
-authors = [{ name="Smorkster", email="smorkster@gmail.com" }]
+version = "2.0"
+description = "A powerful and flexible Tkinter-based splash screen library"
+authors = [
+    { name="Smorkster", email="smorkster@gmail.com" }
+]
 readme = "README.md"
-license = {text = "MIT"}
-requires-python = ">=3.6"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+
 dependencies = []
+
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Operating System :: OS Independent"
+
+    "Topic :: Software Development :: User Interfaces",
+    "Topic :: Software Development :: Libraries :: Python Modules"
 ]
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.0.0",
+    "twine>=4.0.0",
+    "ruff>=0.5.0",
+    "black>=24.0.0",
+    "pytest>=8.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Smorkster/splashscreen"
+Repository = "https://github.com/Smorkster/splashscreen"
+Issues = "https://github.com/Smorkster/splashscreen/issues"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# This project is a single-file module (splashscreen.py)
+py-modules = ["splashscreen"]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["demo.py", "mini_demos.py"]
