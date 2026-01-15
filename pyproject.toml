@@ -6,7 +6,7 @@ authors = [
     { name="Smorkster", email="smorkster@gmail.com" }
 ]
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
 requires-python = ">=3.10"
 
 dependencies = []
@@ -14,7 +14,6 @@ dependencies = []
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 
     "Programming Language :: Python :: 3",
@@ -46,7 +45,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 # This project is a single-file module (splashscreen.py)
-py-modules = ["splashscreen"]
+packages = ["splashscreen"]
 
 [tool.setuptools.exclude-package-data]
 "*" = ["demo.py", "mini_demos.py"]
