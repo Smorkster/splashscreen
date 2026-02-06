@@ -10,7 +10,7 @@ Version: 2.0
 import logging
 import tkinter as tk
 
-from tkinter import E, N, S, W, Canvas, Event, Label, Tk, Toplevel, StringVar
+from tkinter import Canvas, Event, Label, Tk, Toplevel, StringVar
 from tkinter.ttk import Progressbar
 
 logging.basicConfig( level = logging.INFO )
@@ -58,7 +58,7 @@ class Placement:
             self._is_dict = False
 
 
-    def compute_geometry( self, root: Tk, *, has_progressbar: bool = False, has_title: bool = False ) -> str:
+    def compute_geometry( self, root: Tk | Toplevel, *, has_progressbar: bool = False, has_title: bool = False ) -> str:
         """ Compute the geometry string for the splash screen
 
         Args:
@@ -120,7 +120,7 @@ class SplashScreen:
                  fg: str = 'white',
                  mainwindow: Tk | None = None,
                  close_button: bool = False,
-                 title: str | None = None,
+                 title: str = '',
                  progressbar: dict | None = None,
                  block_main: bool = False
                  ):
@@ -145,7 +145,7 @@ class SplashScreen:
 
         # Store configuration
         self._message: str = message
-        self._auto_close_after: float = close_after
+        self._auto_close_after: float | None = close_after
         self._bg_color: str = bg
         self._fg_color: str = fg
         self._block_mainwindow: bool = block_main
@@ -153,21 +153,26 @@ class SplashScreen:
         self._title_text: str = title
         self._progressbar_spec = progressbar
         self._placement: Placement = Placement( placement )
-        self._font_spec: str|tuple = font
 
-        self.rootwindow: Tk|None = mainwindow
+        if font is None:
+            self._font_spec = ( 'Calibri', 12, 'normal' )
+
+        else:
+            self._font_spec: str | tuple = font
+
+        self.rootwindow: Tk | None = mainwindow
         self._is_standalone: bool = mainwindow is None
 
         # Runtime state
-        self.root: Tk|Toplevel = None
-        self.label: Label = None
-        self.title: str = None
-        self.progressbar: Progressbar = None
-        self.close_btn: Canvas = None
-        self._bg: StringVar = None
-        self._fg: StringVar = None
+        self.root: Tk | Toplevel | None
+        self.label: Label
+        self.title: Label
+        self.progressbar: Progressbar
+        self.close_btn: Canvas
+        self._bg: StringVar
+        self._fg: StringVar
         self._is_shown: bool = False
-        self._auto_close_id: str = None
+        self._auto_close_id: str
         self._owns_root: bool = False
 
 
@@ -189,7 +194,7 @@ class SplashScreen:
         self._create_window()
         self._is_shown = True
 
-        if blocking and self._is_standalone and self._owns_root:
+        if blocking and self._is_standalone and self._owns_root and self.root is not None:
             self.root.mainloop()
 
         return self
@@ -202,15 +207,15 @@ class SplashScreen:
             # Create root window
             if self.rootwindow:
                 # Attached mode
-                self.root: Toplevel = Toplevel( master = self.rootwindow )
+                self.root = Toplevel( master = self.rootwindow )
                 self._owns_root = False
 
             else:
                 # Standalone mode
-                default_root: Tk = getattr( tk, '_default_root', None )
+                default_root = getattr( tk, '_default_root', None )
 
                 if default_root is not None:
-                    self.root: Toplevel = Toplevel( master = default_root )
+                    self.root = Toplevel( master = default_root )
                     self._owns_root = False
 
                 else:
@@ -254,7 +259,7 @@ class SplashScreen:
                                 row = 0,
                                 padx = 20,
                                 pady = ( 20, 5 ),
-                                sticky = ( N, W )
+                                sticky = 'nw'
                                 )
 
             # Create message label
@@ -274,7 +279,7 @@ class SplashScreen:
                             row = label_row,
                             padx = 20,
                             pady = 20,
-                            sticky = ( N, W )
+                            sticky = 'nw'
                             )
 
             # Create progress bar if specified
@@ -293,7 +298,7 @@ class SplashScreen:
                                       row = pb_row,
                                       padx = 20,
                                       pady = 10,
-                                      sticky = ( N, S, W, E )
+                                      sticky = 'nswe'
                                       )
 
             # Create close button if specified
@@ -360,7 +365,7 @@ class SplashScreen:
             raise
 
 
-    def _parse_font( self, font_spec ) -> tuple[ str, str, str ]:
+    def _parse_font( self, font_spec ) -> tuple[ str, int, str ]:
         """ Parse font specification into tuple format
 
         Args:
@@ -477,10 +482,10 @@ class SplashScreen:
         if self.root:
             self.root.update_idletasks()
 
-            if self.progressbar:
+            if self._progressbar_spec:
                 self.progressbar.update_idletasks()
 
-            geom = self._placement.compute_geometry( root = self.root, has_progressbar = ( self.progressbar is not None ), has_title = bool( self._title_text ) )
+            geom = self._placement.compute_geometry( root = self.root, has_progressbar = ( self._progressbar_spec is not None ), has_title = bool( self._title_text ) )
             self.root.geometry( newGeometry = geom )
 
             self.root.update_idletasks()
@@ -507,7 +512,7 @@ class SplashScreen:
         self.close_btn.bind( '<Leave>', self._on_canvas_button_leave )
 
         title_row = 0 if self._title_text else 0
-        self.close_btn.grid( column = 1, row = title_row, padx = 5, pady = 5, sticky = ( N, E ) )
+        self.close_btn.grid( column = 1, row = title_row, padx = 5, pady = 5, sticky = 'ne' )
 
 
     def _lighten_color( self, color: str, factor: float ) -> str:
@@ -521,11 +526,16 @@ class SplashScreen:
             (str): New lighter color, or input if error
         """
 
+        if not self.root:
+
+            raise ValueError( 'Root has been closed' )
+
         try:
             if color.startswith( '#' ):
                 r = int( color[ 1:3 ], 16 )
                 g = int( color[ 3:5 ], 16 )
                 b = int( color[ 5:7 ], 16 )
+
             else:
                 rgb = self.root.winfo_rgb( color )
                 r, g, b = [ x // 256 for x in rgb ]
@@ -567,6 +577,10 @@ class SplashScreen:
     def _update_background( self, *args ) -> None:
         """ Update background color for all widgets """
 
+        if not self.root:
+
+            raise ValueError( 'Root has been closed' )
+
         bg_color = self._bg.get()
         self.root.config( bg = bg_color )
 
@@ -594,6 +608,10 @@ class SplashScreen:
 
         def do_update() -> None:
             """ Worker to do the update """
+
+            if not self.root:
+
+                raise ValueError( 'Root has been closed' )
 
             try:
                 if append:
@@ -631,6 +649,11 @@ class SplashScreen:
 
         def do_update() -> None:
             """ Worker to do the update """
+
+            if not self.root:
+
+                raise ValueError( 'Root has been closed' )
+
             self._bg.set( normalized.get() )
             self.root.update_idletasks()
 
@@ -698,14 +721,18 @@ class SplashScreen:
         def do_close():
             """ Worker to close the splash window """
 
+            if not self.root:
+
+                raise ValueError( 'Root has been closed' )
+
             try:
                 # Cancel auto-close if scheduled
-                if self._auto_close_id:
+                if hasattr( self, '_auto_close_id' ):
                     self.root.after_cancel( self._auto_close_id )
-                    self._auto_close_id = None
+                    self._auto_close_id = ''
 
                 # Stop indeterminate progress bar
-                if self.progressbar:
+                if self._progressbar_spec:
                     try:
                         self.progressbar.stop()
 
@@ -730,9 +757,10 @@ class SplashScreen:
                         pass
 
                 # Destroy window
-                self.root.destroy()
-                self.root = None
-                self._is_shown = False
+                if self.root:
+                    self.root.destroy()
+                    self.root = None
+                    self._is_shown = False
 
             except Exception as e:
                 logging.warning( 'Error closing splash screen: %s', e )

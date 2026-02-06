@@ -1,6 +1,6 @@
 [project]
 name = "tksplashscreen"
-version = "2.0"
+version = "2.1"
 description = "A powerful and flexible Tkinter-based splash screen library"
 authors = [
     { name="Smorkster", email="smorkster@gmail.com" }

@@ -21,11 +21,11 @@ logging.basicConfig( level = logging.INFO )
 class NonBlockingSplashDemo:
     def __init__( self, root: Tk ):
         self.root = root
-        self.current_splash = None
+        self.current_splash: SplashScreen
         self.demo_running = False
 
 
-    def run_single_demo( self, placement = 'BR', standalone = False, blocking = False, block_main = False, progressbar: dict = None ):
+    def run_single_demo( self, placement: str | dict[ str, int ] = 'BR', standalone = False, blocking = False, block_main = False, progressbar: dict | None= None ):
         """ Run a single splash screen demo """
 
         if self.demo_running:
@@ -62,7 +62,7 @@ class NonBlockingSplashDemo:
                 self._run_blocking_demo()
 
             elif progressbar != None and progressbar.get( 'mode', False ) == 'determinate':
-                self._schedule_demo_progressbar( progress_spec = progressbar )
+                self._schedule_demo_progressbar( progress_max = progressbar[ 'max' ] )
 
             else:
                 # For non-blocking, schedule updates
@@ -100,23 +100,28 @@ class NonBlockingSplashDemo:
             self.demo_running = False
 
 
-    def _schedule_demo_progressbar( self, progress_spec ):
-        """ Demo progressbar """
+    def _schedule_demo_progressbar( self, progress_max: int ) -> None:
+        """ Demo progressbar
 
-        def operate( i ):
-            scheduler.after( i * 1000, lambda: self.current_splash.step_progressbar( step_count = float( 1 ) ) )
-            scheduler.after( i * 1000, lambda: self.update_message( f'Step { i }' ) )
+        Args:
+            progress_max (int): Max value of progressbar
+        """
 
         scheduler = self.current_splash.root if self.current_splash._is_standalone else self.root
 
-        for i in range( 1, progress_spec[ 'max' ] + 1 ):
-            operate( i )
+        if scheduler is None:
 
-        closing_time = ( progress_spec[ 'max' ] + 2 ) * 1000
+            return
+
+        for i in range( 1, progress_max + 1 ):
+            scheduler.after( i * 1000, lambda: self.current_splash.step_progressbar( step_count = float( 1 ) ) )
+            scheduler.after( i * 1000, lambda: self.update_message( f'Step { i }' ) )
+
+        closing_time = ( progress_max + 2 ) * 1000
         scheduler.after( closing_time, lambda: self.close_splash() )
 
 
-    def _run_blocking_demo( self ):
+    def _run_blocking_demo( self ) -> None:
         """ Run demo for blocking standalone mode """
 
         def _close_splash() -> None:
@@ -124,7 +129,7 @@ class NonBlockingSplashDemo:
 
             self.current_splash.close( delay = 1 )
             logging.info( 'Splash screen closed, continuing...' )
-            self.current_splash = None
+            delattr( self , 'current_splash' )
             self.demo_running = False
 
         # For blocking mode, we need to run updates in a separate thread
@@ -138,11 +143,17 @@ class NonBlockingSplashDemo:
             self.current_splash.root.after( 2500, _close_splash )
 
 
-    def update_message( self, message = None, append = None ):
-        """ Update message """
+    def update_message( self, message: str = '', append: bool = False ) -> None:
+        """ Update message
+
+        Args:
+            message (str): Message to update splash with
+            append (bool): Should message be appended to existing splash text
+        """
 
         if not self.current_splash:
             self.demo_running = False
+
             return
 
         logging.info( f'Updating message: { message }' )
@@ -153,8 +164,12 @@ class NonBlockingSplashDemo:
             logging.error( f'Error updating message: { e }' )
 
 
-    def change_color( self, color ):
-        """ Change background color """
+    def change_color( self, color: str ) -> None:
+        """ Change background color
+
+        Args:
+            color (str): Color definition for splash background
+        """
 
         if not self.current_splash:
             self.demo_running = False
@@ -170,7 +185,7 @@ class NonBlockingSplashDemo:
             logging.error( f'Error changing color: { e }' )
 
 
-    def close_splash( self ):
+    def close_splash( self ) -> None:
         """ Close the splash screen """
 
         if self.current_splash:
@@ -178,7 +193,7 @@ class NonBlockingSplashDemo:
 
             try:
                 self.current_splash.close( delay = 1 )
-                self.current_splash = None
+                delattr( self, 'current_splash' )
 
             except Exception as e:
                 logging.error( f'Error closing splash: { e }' )
@@ -271,7 +286,7 @@ def main():
     gui_row += 1
 
     separator = Separator( root, orient = 'horizontal' )
-    separator.grid( columnspan = 2, row = gui_row, pady = 10, sticky = ( E, W ) )
+    separator.grid( columnspan = 2, row = gui_row, pady = 10, sticky = 'we' )
     gui_row += 1
 
     # Attached demos
@@ -283,7 +298,7 @@ def main():
     single_demo_btn = Button( root,
                              text = 'Run Attached Demo (BR)',
                              command = lambda: demo_runner.demo.run_single_demo( 'BR' ) )
-    single_demo_btn.grid( column = 0, row = gui_row, padx = 5, pady = 5, sticky = ( N, W ) )
+    single_demo_btn.grid( column = 0, row = gui_row, padx = 5, pady = 5, sticky = 'nw' )
 
     random_demo_btn = Button( root,
                              text = 'Run Random Position Demo',
@@ -291,33 +306,33 @@ def main():
                                 'x': random.randint( 10, 800 ),
                                 'y': random.randint( 10, 600 )
                             } ) )
-    random_demo_btn.grid( column = 1, row = gui_row, padx = 5, pady = 5, sticky = ( N, W ) )
+    random_demo_btn.grid( column = 1, row = gui_row, padx = 5, pady = 5, sticky = 'nw' )
     gui_row += 1
 
     sequence_demo_btn = Button( root,
                                text = 'Run Sequence All Positions',
                                command = demo_runner.run_demo_sequence )
-    sequence_demo_btn.grid( column = 0, row = gui_row, padx = 5, pady = 5, sticky = ( N, W ) )
+    sequence_demo_btn.grid( column = 0, row = gui_row, padx = 5, pady = 5, sticky = 'nw' )
 
     main_blocking_demo_btn = Button( root,
                                     text = 'Blocking main window',
                                     command = lambda: demo_runner.demo.run_single_demo( 'CR', block_main = True ) )
-    main_blocking_demo_btn.grid( column = 1, row = gui_row, padx = 5, pady = 5, sticky = ( N, W ) )
+    main_blocking_demo_btn.grid( column = 1, row = gui_row, padx = 5, pady = 5, sticky = 'nw' )
     gui_row += 1
 
     basic_10s_progressbar_demo_btn = Button( root,
                                             text = 'Attached, 10 seconds progressbar, (BR)',
                                             command = lambda: demo_runner.demo.run_single_demo( 'BR', block_main = False, progressbar = { 'max': 10, 'mode': 'determinate' } ) )
-    basic_10s_progressbar_demo_btn.grid( column = 0, row = gui_row, padx = 5, pady = 5, sticky = ( N, W ) )
+    basic_10s_progressbar_demo_btn.grid( column = 0, row = gui_row, padx = 5, pady = 5, sticky = 'nw' )
 
     basic_indet_progressbar_demo_btn = Button( root,
                                               text = 'Attached, indeterminate (BR)',
                                               command = lambda: demo_runner.demo.run_single_demo( 'BR', progressbar = { 'mode': 'indeterminate' } ) )
-    basic_indet_progressbar_demo_btn.grid( column = 1, row = gui_row, padx = 5, pady = 5, sticky = ( N, W ) )
+    basic_indet_progressbar_demo_btn.grid( column = 1, row = gui_row, padx = 5, pady = 5, sticky = 'nw' )
     gui_row += 1
 
     separator = Separator( root, orient = 'horizontal' )
-    separator.grid( columnspan = 2, row = gui_row, pady = 10, sticky = ( E, W ) )
+    separator.grid( columnspan = 2, row = gui_row, pady = 10, sticky = 'we' )
     gui_row += 1
 
     # Standalone demos
@@ -331,26 +346,26 @@ def main():
     standalone_demo_btn = Button( root,
                                  text = 'Standalone Non-blocking',
                                  command = lambda: demo_runner.demo.run_single_demo( 'CR', standalone = True, blocking = False ) )
-    standalone_demo_btn.grid( column = 0, row = gui_row, padx = 5, pady = 5, sticky = ( N, W ) )
+    standalone_demo_btn.grid( column = 0, row = gui_row, padx = 5, pady = 5, sticky = 'nw' )
 
     standalone_blocking_demo_btn = Button( root,
                                           text = 'Standalone Blocking code',
                                           command = lambda: demo_runner.demo.run_single_demo( 'CR', standalone = True, blocking = True ) )
-    standalone_blocking_demo_btn.grid( column = 1, row = gui_row, padx = 5, pady = 5, sticky = ( N, W ) )
+    standalone_blocking_demo_btn.grid( column = 1, row = gui_row, padx = 5, pady = 5, sticky = 'nw' )
     gui_row += 1
 
     blocking_test_btn = Button( root, text = 'Test TRUE Blocking (standalone)',
                               command = test_true_blocking )
-    blocking_test_btn.grid( column = 0, row = gui_row, padx = 5, pady = 5, sticky = ( N, W ) )
+    blocking_test_btn.grid( column = 0, row = gui_row, padx = 5, pady = 5, sticky = 'nw' )
     gui_row += 1
 
     separator = Separator( root, orient = 'horizontal' )
-    separator.grid( columnspan = 2, row = gui_row, pady = 10, sticky = ( E, W ) )
+    separator.grid( columnspan = 2, row = gui_row, pady = 10, sticky = 'we' )
     gui_row += 1
 
     # Close button
     close_btn = Button( root, text = 'Close Application', command = root.destroy )
-    close_btn.grid( column = 0, row = gui_row, padx = 5, pady = 10, sticky = ( N, W ) )
+    close_btn.grid( column = 0, row = gui_row, padx = 5, pady = 10, sticky = 'nw' )
 
     logging.info( 'Application started - main window is responsive' )
 
@@ -361,6 +376,7 @@ def main():
         root.rowconfigure( i, weight = 0 )
 
     root.mainloop()
+
 
 if __name__ == '__main__':
     main()
