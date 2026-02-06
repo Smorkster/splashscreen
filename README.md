@@ -25,8 +25,9 @@ See `demo.py` and `mini_demos.py` in the repo for full runnable examples.
 ```python
 from splashscreen import SplashScreen
 
-splash = SplashScreen("Loading…", close_after=3)
+splash = SplashScreen("Loading...", close_after=3)
 splash.show()
+splash.root.mainloop()
 ```
 
 
